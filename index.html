@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="theme-color" content="#1a4a2e"/>
+  <title>Still Moving</title>
+  <link rel="manifest" href="manifest.json"/>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+    :root{
+      --gd:#1a4a2e;--gm:#2d6a4f;--gl:#95d5b2;--gp:#d8f3dc;--gx:#f0faf4;
+      --grey:#6c757d;--white:#fff;--text:#1a1a2e;
+    }
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--gx);color:var(--text);min-height:100vh;max-width:430px;margin:0 auto}
+    .screen{display:none;min-height:100vh;flex-direction:column}
+    .screen.active{display:flex}
+    .hdr{background:var(--gd);padding:16px 20px 20px;text-align:center;position:relative}
+    .hdr-logo{width:110px;margin-bottom:2px}
+    .hdr-title{color:var(--white);font-size:12px;letter-spacing:1px;opacity:.8}
+    .back{position:absolute;left:16px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--white);font-size:24px;cursor:pointer;padding:8px}
+    .fg{margin-bottom:16px}
+    .fg label{display:block;font-size:11px;font-weight:600;color:var(--grey);letter-spacing:.5px;margin-bottom:6px;text-transform:uppercase}
+    .fg input,.fg select,.fg textarea{width:100%;padding:14px 16px;border:1.5px solid #e0e0e0;border-radius:12px;font-size:15px;color:var(--text);background:var(--white);outline:none;transition:border-color .2s}
+    .fg input:focus,.fg select:focus{border-color:var(--gm)}
+    .btn{width:100%;padding:16px;background:var(--gd);color:var(--white);border:none;border-radius:14px;font-size:16px;font-weight:600;cursor:pointer;margin-top:8px}
+    .btn-out{background:transparent;color:var(--gd);border:1.5px solid var(--gd);margin-top:10px}
+    .btn-sm{padding:10px 20px;width:auto;font-size:14px;border-radius:10px;margin-top:0}
+    .err{color:#e74c3c;font-size:13px;margin-top:8px;text-align:center}
+    .card{background:var(--white);border-radius:20px;padding:20px;margin-bottom:16px;box-shadow:0 2px 12px rgba(26,74,46,.08)}
+
+    /* LOGIN */
+    #s-login{background:var(--gd);justify-content:center;align-items:center;padding:40px 24px}
+    .login-logo{width:190px;margin-bottom:6px}
+    .login-tag{color:var(--gl);font-size:13px;text-align:center;margin-bottom:36px;font-style:italic}
+    .login-card{background:var(--white);border-radius:20px;padding:28px 24px;width:100%}
+    .login-card h2{color:var(--gd);font-size:20px;margin-bottom:4px}
+    .login-card p{color:var(--grey);font-size:13px;margin-bottom:22px}
+    .tabs{display:flex;background:#f0f0f0;border-radius:10px;padding:3px;margin-bottom:20px}
+    .tab{flex:1;padding:8px;border:none;background:none;border-radius:8px;font-size:14px;cursor:pointer;font-weight:500;color:var(--grey)}
+    .tab.active{background:var(--white);color:var(--gd);font-weight:600;box-shadow:0 1px 4px rgba(0,0,0,.1)}
+    .otp-sent{text-align:center;padding:16px 0}
+    .otp-em{font-size:48px;margin-bottom:12px}
+    .otp-sent h3{color:var(--gd);margin-bottom:6px}
+    .otp-sent p{color:var(--grey);font-size:13px;margin-bottom:20px}
+    .otp-input{text-align:center;font-size:24px;font-weight:700;letter-spacing:8px}
+
+    /* DASHBOARD */
+    #s-dash{background:var(--gx)}
+    .dash-hero{background:var(--gd);padding:20px 20px 28px;color:var(--white)}
+    .dash-top{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+    .dash-logo{width:72px}
+    .dash-welcome{font-size:12px;opacity:.7;margin-bottom:2px}
+    .dash-name{font-size:20px;font-weight:700}
+    .dash-logout{margin-left:auto;background:rgba(255,255,255,.15);border:none;color:var(--white);padding:6px 12px;border-radius:8px;font-size:12px;cursor:pointer}
+    .dash-loc{background:rgba(255,255,255,.1);border-radius:12px;padding:14px 16px;display:flex;align-items:center;gap:10px}
+    .dash-loc-icon{font-size:24px}
+    .dash-loc-label{font-size:11px;opacity:.7}
+    .dash-loc-name{font-size:15px;font-weight:600}
+    .dash-body{padding:20px;flex:1}
+    .prog-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+    .prog-title{font-size:12px;color:var(--grey);font-weight:600;letter-spacing:.5px}
+    .prog-km{font-size:26px;font-weight:700;color:var(--gd)}
+    .prog-total{font-size:12px;color:var(--grey)}
+    .route-bar{position:relative;height:8px;background:var(--gp);border-radius:4px;margin-bottom:14px;overflow:visible}
+    .route-fill{height:100%;background:linear-gradient(90deg,var(--gm),var(--gl));border-radius:4px;transition:width .6s ease;position:relative;min-width:0}
+    .route-pin{position:absolute;right:-8px;top:-6px;width:20px;height:20px;background:var(--gd);border-radius:50%;border:3px solid var(--white);box-shadow:0 2px 6px rgba(0,0,0,.2)}
+    .ms-dots{display:flex;justify-content:space-between;margin-bottom:6px}
+    .ms-dot{display:flex;flex-direction:column;align-items:center;gap:3px}
+    .ms-dot-c{width:10px;height:10px;border-radius:50%;background:var(--gp);border:2px solid var(--gl)}
+    .ms-dot-c.done{background:var(--gd);border-color:var(--gd)}
+    .ms-dot-l{font-size:9px;color:var(--grey);text-align:center;max-width:38px}
+    .stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px}
+    .stat{background:var(--white);border-radius:14px;padding:14px 10px;text-align:center;box-shadow:0 2px 8px rgba(26,74,46,.06)}
+    .stat-v{font-size:20px;font-weight:700;color:var(--gd)}
+    .stat-l{font-size:10px;color:var(--grey);margin-top:2px}
+    .actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+    .act-btn{background:var(--white);border:none;border-radius:16px;padding:16px 12px;cursor:pointer;text-align:center;box-shadow:0 2px 8px rgba(26,74,46,.08)}
+    .act-icon{font-size:26px;margin-bottom:6px}
+    .act-label{font-size:12px;font-weight:600;color:var(--gd)}
+    .act-btn.primary{background:var(--gd);grid-column:1/-1}
+    .act-btn.primary .act-label{color:var(--white);font-size:15px}
+
+    /* LOG */
+    #s-log{background:var(--gx)}
+    .log-body{padding:20px;flex:1;overflow-y:auto}
+    .rpe-row{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+    .rpe-btn{background:var(--white);border:2px solid #e0e0e0;border-radius:12px;padding:12px 4px;cursor:pointer;text-align:center;transition:all .2s}
+    .rpe-btn.sel{border-color:var(--gd);background:var(--gp)}
+    .rpe-em{font-size:22px;display:block;margin-bottom:3px}
+    .rpe-lb{font-size:10px;color:var(--grey)}
+
+    /* MILESTONE */
+    #s-milestone{background:var(--gd);justify-content:center;align-items:center;padding:40px 24px;text-align:center}
+    .ms-emoji{font-size:80px;margin-bottom:14px;animation:bounce 1s ease infinite}
+    @keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+    .ms-reached{color:var(--gl);font-size:11px;letter-spacing:2px;margin-bottom:6px}
+    .ms-landmark{color:var(--white);font-size:26px;font-weight:700;margin-bottom:4px}
+    .ms-km{color:var(--gl);font-size:14px;margin-bottom:22px}
+    .ms-article{background:rgba(255,255,255,.1);border-radius:16px;padding:20px;text-align:left;margin-bottom:22px}
+    .ms-art-title{color:var(--white);font-size:15px;font-weight:700;margin-bottom:8px}
+    .ms-art-text{color:rgba(255,255,255,.82);font-size:13px;line-height:1.65}
+
+    /* LEADERBOARD */
+    #s-lb{background:var(--gx)}
+    .lb-body{padding:20px;flex:1}
+    .lb-item{background:var(--white);border-radius:14px;padding:14px 16px;margin-bottom:10px;display:flex;align-items:center;gap:12px;box-shadow:0 2px 8px rgba(26,74,46,.06)}
+    .lb-rank{width:32px;height:32px;border-radius:50%;background:var(--gp);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:var(--gd);flex-shrink:0}
+    .lb-rank.g{background:#fff3cd;color:#856404}
+    .lb-rank.s{background:#e9ecef;color:#495057}
+    .lb-rank.b{background:#fde8d8;color:#8b4513}
+    .lb-info{flex:1}
+    .lb-name{font-weight:600;font-size:14px}
+    .lb-loc{font-size:11px;color:var(--grey)}
+    .lb-km{font-weight:700;color:var(--gd);font-size:15px}
+
+    /* PROFILE */
+    #s-profile{background:var(--gx)}
+    .prof-body{padding:20px;flex:1}
+    .hist-item{background:var(--white);border-radius:12px;padding:12px 16px;margin-bottom:8px;display:flex;align-items:center;gap:12px}
+    .hist-icon{font-size:22px}
+    .hist-info{flex:1}
+    .hist-date{font-size:12px;color:var(--grey)}
+    .hist-detail{font-size:14px;font-weight:500}
+    .hist-km{font-weight:700;color:var(--gd)}
+
+    /* ADMIN */
+    #s-admin{background:var(--gx)}
+    .admin-body{padding:20px;flex:1;overflow-x:auto}
+    .admin-tbl{width:100%;border-collapse:collapse;background:var(--white);border-radius:14px;overflow:hidden;font-size:12px}
+    .admin-tbl th{background:var(--gd);color:var(--white);padding:10px 12px;text-align:left}
+    .admin-tbl td{padding:10px 12px;border-bottom:1px solid #f0f0f0}
+    .badge{display:inline-block;padding:3px 8px;border-radius:6px;font-size:11px;font-weight:600}
+    .b-done{background:var(--gp);color:var(--gd)}
+    .b-active{background:#fff3cd;color:#856404}
+
+    /* FINISH */
+    #s-finish{background:var(--gd);justify-content:center;align-items:center;padding:40px 24px;text-align:center}
+    .fin-medal{font-size:100px;margin-bottom:16px}
+    .fin-title{color:var(--white);font-size:30px;font-weight:800;margin-bottom:6px}
+    .fin-sub{color:var(--gl);font-size:15px;margin-bottom:22px;line-height:1.5}
+    .fin-box{background:rgba(255,255,255,.1);border-radius:16px;padding:20px;margin-bottom:22px}
+    .fin-txt{color:var(--white);font-size:13px;line-height:1.7}
+
+    /* NAV */
+    .nav{background:var(--white);display:flex;border-top:1px solid #f0f0f0;padding:8px 0 20px;position:sticky;bottom:0}
+    .nav-i{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px;cursor:pointer;background:none;border:none}
+    .nav-ic{font-size:22px}
+    .nav-lb{font-size:10px;color:var(--grey)}
+    .nav-i.active .nav-lb{color:var(--gd);font-weight:600}
+
+    /* TOAST */
+    .toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:var(--gd);color:var(--white);padding:12px 24px;border-radius:100px;font-size:14px;font-weight:500;z-index:1000;opacity:0;transition:opacity .3s;white-space:nowrap;pointer-events:none}
+    .toast.show{opacity:1}
+    .loading{display:flex;justify-content:center;align-items:center;padding:40px}
+    .spinner{width:32px;height:32px;border:3px solid var(--gp);border-top-color:var(--gd);border-radius:50%;animation:spin .8s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .empty{text-align:center;padding:40px 20px;color:var(--grey);font-size:14px}
+  </style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="s-login" class="screen active">
+  <img src="logo.png" class="login-logo" alt="Still Moving"/>
+  <p class="login-tag">Because life doesn't stop, and neither do you...</p>
+  <div class="login-card">
+    <h2>Welcome</h2>
+    <p>Join The Jaipur Challenge</p>
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('login',this)">Sign In</button>
+      <button class="tab" onclick="switchTab('register',this)">Register</button>
+    </div>
+
+    <div id="tab-login">
+      <div id="otp-step-1">
+        <div class="fg">
+          <label>Email Address</label>
+          <input type="email" id="login-email" placeholder="your@email.com"/>
+        </div>
+        <div id="login-err" class="err"></div>
+        <button class="btn" onclick="sendOTP()">Send OTP →</button>
+      </div>
+      <div id="otp-step-2" style="display:none">
+        <div class="otp-sent">
+          <div class="otp-em">📧</div>
+          <h3>Check your email</h3>
+          <p>We sent a code to<br/><strong id="otp-email-shown"></strong></p>
+        </div>
+        <div class="fg">
+          <label>Enter OTP</label>
+          <input type="number" id="otp-code" class="otp-input" placeholder="000000"/>
+        </div>
+        <div id="otp-err" class="err"></div>
+        <button class="btn" onclick="verifyOTP()">Verify →</button>
+        <button class="btn btn-out" onclick="resetOTP()">← Back</button>
+      </div>
+    </div>
+
+    <div id="tab-register" style="display:none">
+      <div class="fg"><label>Full Name</label><input type="text" id="reg-name" placeholder="Your name"/></div>
+      <div class="fg"><label>Email</label><input type="email" id="reg-email" placeholder="your@email.com"/></div>
+      <div class="fg"><label>Phone (WhatsApp)</label><input type="tel" id="reg-phone" placeholder="+91 98765 43210"/></div>
+      <div class="fg">
+        <label>Your Tier</label>
+        <select id="reg-tier">
+          <option value="Starter">🌱 Starter — 10 active days</option>
+          <option value="Mover">💪 Mover — Cover 25km</option>
+          <option value="Warrior">🔥 Warrior — Full 50km</option>
+        </select>
+      </div>
+      <div id="reg-err" class="err"></div>
+      <button class="btn" onclick="registerUser()">Start My Journey →</button>
+    </div>
+
+    <button class="btn btn-out" onclick="showAdmin()" style="margin-top:16px;font-size:13px;padding:10px">Admin Login</button>
+  </div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="s-dash" class="screen">
+  <div class="dash-hero">
+    <div class="dash-top">
+      <img src="logo.png" class="dash-logo"/>
+      <div>
+        <div class="dash-welcome">Welcome back,</div>
+        <div class="dash-name" id="d-name">—</div>
+      </div>
+      <button class="dash-logout" onclick="logout()">Logout</button>
+    </div>
+    <div class="dash-loc">
+      <div class="dash-loc-icon" id="d-loc-icon">🏰</div>
+      <div>
+        <div class="dash-loc-label">You're currently at</div>
+        <div class="dash-loc-name" id="d-loc-name">Amer Fort — Start</div>
+      </div>
+    </div>
+  </div>
+  <div class="dash-body">
+    <div class="card">
+      <div class="prog-hdr">
+        <span class="prog-title">THE JAIPUR CHALLENGE</span>
+        <span><span class="prog-km" id="d-km">0</span><span class="prog-total"> / 50 km</span></span>
+      </div>
+      <div class="route-bar">
+        <div class="route-fill" id="d-bar" style="width:0%"><div class="route-pin"></div></div>
+      </div>
+      <div class="ms-dots">
+        <div class="ms-dot"><div class="ms-dot-c done" id="dot-0"></div><div class="ms-dot-l">Start</div></div>
+        <div class="ms-dot"><div class="ms-dot-c" id="dot-10"></div><div class="ms-dot-l">10km</div></div>
+        <div class="ms-dot"><div class="ms-dot-c" id="dot-20"></div><div class="ms-dot-l">20km</div></div>
+        <div class="ms-dot"><div class="ms-dot-c" id="dot-30"></div><div class="ms-dot-l">½ way</div></div>
+        <div class="ms-dot"><div class="ms-dot-c" id="dot-40"></div><div class="ms-dot-l">40km</div></div>
+        <div class="ms-dot"><div class="ms-dot-c" id="dot-50"></div><div class="ms-dot-l">Done!</div></div>
+      </div>
+    </div>
+    <div class="stats">
+      <div class="stat"><div class="stat-v" id="d-active">0</div><div class="stat-l">Active Days</div></div>
+      <div class="stat"><div class="stat-v" id="d-left">30</div><div class="stat-l">Days Left</div></div>
+      <div class="stat"><div class="stat-v" id="d-kmleft">50</div><div class="stat-l">km to Go</div></div>
+    </div>
+    <div class="actions">
+      <button class="act-btn primary" onclick="showScreen('log')">
+        <div class="act-icon">➕</div><div class="act-label">Log Today's Activity</div>
+      </button>
+      <button class="act-btn" onclick="showScreen('lb')">
+        <div class="act-icon">🏆</div><div class="act-label">Leaderboard</div>
+      </button>
+      <button class="act-btn" onclick="showScreen('profile')">
+        <div class="act-icon">📊</div><div class="act-label">My History</div>
+      </button>
+    </div>
+  </div>
+  <nav class="nav">
+    <button class="nav-i active" onclick="showScreen('dash')"><span class="nav-ic">🏠</span><span class="nav-lb">Home</span></button>
+    <button class="nav-i" onclick="showScreen('log')"><span class="nav-ic">➕</span><span class="nav-lb">Log</span></button>
+    <button class="nav-i" onclick="showScreen('lb')"><span class="nav-ic">🏆</span><span class="nav-lb">Leaders</span></button>
+    <button class="nav-i" onclick="showScreen('profile')"><span class="nav-ic">👤</span><span class="nav-lb">Profile</span></button>
+  </nav>
+</div>
+
+<!-- LOG -->
+<div id="s-log" class="screen">
+  <div class="hdr">
+    <button class="back" onclick="showScreen('dash')">←</button>
+    <img src="logo.png" class="hdr-logo"/>
+    <div class="hdr-title">LOG ACTIVITY</div>
+  </div>
+  <div class="log-body">
+    <div class="fg"><label>Distance Today (km)</label><input type="number" id="log-km" placeholder="e.g. 3.5" min="0.1" max="200" step="0.1"/></div>
+    <div class="fg">
+      <label>Activity Type</label>
+      <select id="log-type">
+        <option value="Walking">🚶 Walking</option>
+        <option value="Running">🏃 Running</option>
+        <option value="Cycling">🚴 Cycling</option>
+        <option value="Swimming">🏊 Swimming</option>
+        <option value="Other">✨ Other</option>
+      </select>
+    </div>
+    <div class="fg">
+      <label>How did it feel?</label>
+      <div class="rpe-row">
+        <button class="rpe-btn" onclick="selRPE(this,'Easy')"><span class="rpe-em">😴</span><span class="rpe-lb">Easy</span></button>
+        <button class="rpe-btn" onclick="selRPE(this,'Moderate')"><span class="rpe-em">😊</span><span class="rpe-lb">Good</span></button>
+        <button class="rpe-btn" onclick="selRPE(this,'Hard')"><span class="rpe-em">😤</span><span class="rpe-lb">Hard</span></button>
+        <button class="rpe-btn" onclick="selRPE(this,'All out')"><span class="rpe-em">🔥</span><span class="rpe-lb">All out</span></button>
+      </div>
+    </div>
+    <div class="fg"><label>Notes (optional)</label><textarea id="log-notes" rows="3" placeholder="Any wins today?" style="resize:none"></textarea></div>
+    <div id="log-err" class="err"></div>
+    <button class="btn" onclick="submitActivity()">Save Activity ✓</button>
+  </div>
+</div>
+
+<!-- MILESTONE -->
+<div id="s-milestone" class="screen">
+  <div class="ms-emoji" id="ms-em">🏰</div>
+  <div class="ms-reached">MILESTONE REACHED</div>
+  <div class="ms-landmark" id="ms-lm">Jal Mahal</div>
+  <div class="ms-km" id="ms-km">10km complete</div>
+  <div class="ms-article">
+    <div class="ms-art-title" id="ms-title">—</div>
+    <div class="ms-art-text" id="ms-text">—</div>
+  </div>
+  <button class="btn" onclick="showScreen('dash')" style="background:rgba(255,255,255,.2);border:1.5px solid rgba(255,255,255,.4)">Continue Journey →</button>
+</div>
+
+<!-- LEADERBOARD -->
+<div id="s-lb" class="screen">
+  <div class="hdr">
+    <button class="back" onclick="showScreen('dash')">←</button>
+    <img src="logo.png" class="hdr-logo"/>
+    <div class="hdr-title">LEADERBOARD</div>
+  </div>
+  <div class="lb-body" id="lb-body"><div class="loading"><div class="spinner"></div></div></div>
+</div>
+
+<!-- PROFILE -->
+<div id="s-profile" class="screen">
+  <div class="hdr">
+    <button class="back" onclick="showScreen('dash')">←</button>
+    <img src="logo.png" class="hdr-logo"/>
+    <div class="hdr-title">MY HISTORY</div>
+  </div>
+  <div class="prof-body" id="prof-body"><div class="loading"><div class="spinner"></div></div></div>
+</div>
+
+<!-- FINISH -->
+<div id="s-finish" class="screen">
+  <div class="fin-medal">🏅</div>
+  <div class="fin-title">You Did It!</div>
+  <div class="fin-sub" id="fin-sub">You've completed The Jaipur Challenge!</div>
+  <div class="fin-box">
+    <div class="fin-txt">🎓 Your personalised finisher certificate will be sent within 48 hours.<br/><br/>Share your achievement and inspire someone else to start.<br/><br/><strong>#StillMoving #JaipurChallenge</strong></div>
+  </div>
+  <button class="btn" onclick="showScreen('dash')" style="background:rgba(255,255,255,.2);border:1.5px solid rgba(255,255,255,.4)">Back to Dashboard</button>
+</div>
+
+<!-- ADMIN -->
+<div id="s-admin" class="screen">
+  <div class="hdr">
+    <button class="back" onclick="showScreen('s-login')">←</button>
+    <img src="logo.png" class="hdr-logo"/>
+    <div class="hdr-title">ADMIN</div>
+  </div>
+  <div class="admin-body">
+    <div style="display:flex;gap:10px;margin-bottom:16px">
+      <button class="btn btn-sm" onclick="exportCSV()">Export CSV</button>
+      <button class="btn btn-sm" onclick="loadAdmin()" style="background:var(--gm)">Refresh</button>
+    </div>
+    <div id="admin-stats" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px"></div>
+    <div style="overflow-x:auto">
+      <table class="admin-tbl">
+        <thead><tr><th>Name</th><th>Email</th><th>Tier</th><th>KM</th><th>Days</th><th>Status</th></tr></thead>
+        <tbody id="admin-tbody"><tr><td colspan="6" style="text-align:center;padding:20px;color:var(--grey)">Loading...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const {createClient} = supabase;
+const sb = createClient(
+  'https://vtxqfawfdewzfuwihave.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ0eHFmYXdmZGV3emZ1d2loYXZlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgyMjAwODAsImV4cCI6MjEwMzc5NjA4MH0.1B8p0hI8UBMsWlAkhQg8gPep27rPeR3Sl40kwwDvPcE'
+);
+
+let participant = null;
+let challenge = null;
+let milestones = [];
+let rpe = '';
+let loginEmail = '';
+
+const LOCS = [
+  {km:0,name:'Amer Fort — Start',emoji:'🏰'},
+  {km:10,name:'Jal Mahal',emoji:'🌊'},
+  {km:20,name:'City Palace',emoji:'🏛️'},
+  {km:30,name:'Hawa Mahal — Halfway!',emoji:'🌬️'},
+  {km:40,name:'Jantar Mantar',emoji:'🔭'},
+  {km:50,name:'Nahargarh Fort — Done!',emoji:'🏆'},
+];
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  const el = document.getElementById(id.startsWith('s-')?id:'s-'+id) || document.getElementById(id);
+  if(el) el.classList.add('active');
+  document.querySelectorAll('.nav-i').forEach(n=>n.classList.remove('active'));
+  const ni = {'dash':0,'log':1,'lb':2,'profile':3};
+  const key = id.replace('s-','');
+  if(ni[key]!==undefined) document.querySelectorAll('.nav-i')[ni[key]]?.classList.add('active');
+  if(key==='dash') updateDash();
+  if(key==='lb') loadLB();
+  if(key==='profile') loadProfile();
+  if(key==='admin') loadAdmin();
+}
+
+function switchTab(tab, btn) {
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('tab-login').style.display = tab==='login'?'block':'none';
+  document.getElementById('tab-register').style.display = tab==='register'?'block':'none';
+}
+
+// ── AUTH ──
+async function sendOTP() {
+  const email = document.getElementById('login-email').value.trim();
+  const err = document.getElementById('login-err');
+  if(!email||!email.includes('@')) {err.textContent='Valid email required.';return;}
+  err.textContent='';
+  loginEmail = email;
+  const {data:p} = await sb.from('participants').select('id').eq('email',email).maybeSingle();
+  if(!p) {err.textContent='Email not found. Please register first.';return;}
+  const {error} = await sb.auth.signInWithOtp({email,options:{shouldCreateUser:false}});
+  if(error) {err.textContent='Could not send OTP. Try again.';return;}
+  document.getElementById('otp-email-shown').textContent = email;
+  document.getElementById('otp-step-1').style.display='none';
+  document.getElementById('otp-step-2').style.display='block';
+  toast('OTP sent to '+email);
+}
+
+async function verifyOTP() {
+  const token = document.getElementById('otp-code').value.trim();
+  const err = document.getElementById('otp-err');
+  if(!token||token.length<6) {err.textContent='Enter the 6-digit code.';return;}
+  const {error} = await sb.auth.verifyOtp({email:loginEmail,token,type:'email'});
+  if(error) {err.textContent='Invalid or expired code.';return;}
+  await loadParticipant(loginEmail);
+}
+
+function resetOTP() {
+  document.getElementById('otp-step-1').style.display='block';
+  document.getElementById('otp-step-2').style.display='none';
+  document.getElementById('otp-code').value='';
+  document.getElementById('otp-err').textContent='';
+}
+
+async function logout() {
+  await sb.auth.signOut();
+  participant=null;
+  showScreen('s-login');
+  resetOTP();
+  document.getElementById('login-email').value='';
+}
+
+// ── REGISTER ──
+async function registerUser() {
+  const name=document.getElementById('reg-name').value.trim();
+  const email=document.getElementById('reg-email').value.trim();
+  const phone=document.getElementById('reg-phone').value.trim();
+  const tier=document.getElementById('reg-tier').value;
+  const err=document.getElementById('reg-err');
+  if(!name){err.textContent='Name required.';return;}
+  if(!email||!email.includes('@')){err.textContent='Valid email required.';return;}
+  err.textContent='';
+  const {data:ch}=await sb.from('challenges').select('id').eq('slug','jaipur-challenge').maybeSingle();
+  if(!ch){err.textContent='Challenge not found. Contact admin.';return;}
+  const {data:ex}=await sb.from('participants').select('id').eq('email',email).maybeSingle();
+  if(ex){err.textContent='Already registered. Please sign in.';switchTab('login',document.querySelectorAll('.tab')[0]);return;}
+  const {error}=await sb.from('participants').insert({name,email,phone,tier,challenge_id:ch.id});
+  if(error){err.textContent='Registration failed. Try again.';return;}
+  await sb.auth.signInWithOtp({email,options:{shouldCreateUser:true}});
+  loginEmail=email;
+  toast('Registered! Check email for OTP.');
+  switchTab('login',document.querySelectorAll('.tab')[0]);
+  document.getElementById('login-email').value=email;
+  document.getElementById('otp-email-shown').textContent=email;
+  document.getElementById('otp-step-1').style.display='none';
+  document.getElementById('otp-step-2').style.display='block';
+}
+
+async function loadParticipant(email) {
+  const {data:p}=await sb.from('participants').select('*').eq('email',email).maybeSingle();
+  if(!p){toast('Participant not found.');return;}
+  participant=p;
+  const {data:ch}=await sb.from('challenges').select('*').eq('slug','jaipur-challenge').maybeSingle();
+  challenge=ch;
+  const {data:ms}=await sb.from('milestones').select('*').eq('challenge_id',ch.id).order('km_threshold');
+  milestones=ms||[];
+  showScreen('dash');
+}
+
+// ── DASHBOARD ──
+async function updateDash() {
+  if(!participant) return;
+  const {data:p}=await sb.from('participants').select('*').eq('id',participant.id).maybeSingle();
+  if(p) participant=p;
+  const km=parseFloat(participant.total_km)||0;
+  const pct=Math.min((km/50)*100,100);
+  document.getElementById('d-name').textContent=participant.name;
+  document.getElementById('d-km').textContent=km.toFixed(1);
+  document.getElementById('d-bar').style.width=pct+'%';
+  document.getElementById('d-kmleft').textContent=Math.max(0,50-km).toFixed(1);
+  let loc=LOCS[0];
+  LOCS.forEach(l=>{if(km>=l.km)loc=l;});
+  document.getElementById('d-loc-icon').textContent=loc.emoji;
+  document.getElementById('d-loc-name').textContent=loc.name;
+  [0,10,20,30,40,50].forEach(t=>{
+    const d=document.getElementById('dot-'+t);
+    if(d) km>=t?d.classList.add('done'):d.classList.remove('done');
+  });
+  const {count}=await sb.from('activities').select('*',{count:'exact',head:true}).eq('participant_id',participant.id);
+  document.getElementById('d-active').textContent=count||0;
+  const start=new Date(challenge?.start_date||'2026-09-01');
+  const days=challenge?.duration_days||30;
+  const elapsed=Math.max(0,Math.floor((new Date()-start)/(1000*60*60*24)));
+  document.getElementById('d-left').textContent=Math.max(0,days-elapsed);
+}
+
+// ── LOG ──
+function selRPE(btn,val) {
+  document.querySelectorAll('.rpe-btn').forEach(b=>b.classList.remove('sel'));
+  btn.classList.add('sel');
+  rpe=val;
+}
+
+async function submitActivity() {
+  if(!participant) return;
+  const km=parseFloat(document.getElementById('log-km').value);
+  const err=document.getElementById('log-err');
+  if(!km||km<=0){err.textContent='Enter a valid distance.';return;}
+  err.textContent='';
+  const type=document.getElementById('log-type').value;
+  const notes=document.getElementById('log-notes').value;
+  const today=new Date().toISOString().split('T')[0];
+  const prevKm=parseFloat(participant.total_km)||0;
+  const newKm=prevKm+km;
+
+  await sb.from('activities').insert({participant_id:participant.id,date:today,distance_km:km,activity_type:type,rpe,notes});
+
+  const upd={total_km:newKm};
+  if(newKm>=50&&participant.status!=='completed'){upd.status='completed';upd.completed_date=today;}
+  await sb.from('participants').update(upd).eq('id',participant.id);
+  participant.total_km=newKm;
+
+  const {data:reached}=await sb.from('milestones_reached').select('milestone_id').eq('participant_id',participant.id);
+  const reachedIds=(reached||[]).map(r=>r.milestone_id);
+  let hit=null;
+  for(const ms of milestones){
+    if(prevKm<ms.km_threshold&&newKm>=ms.km_threshold&&!reachedIds.includes(ms.id)){
+      hit=ms;
+      await sb.from('milestones_reached').insert({participant_id:participant.id,milestone_id:ms.id});
+      break;
+    }
+  }
+
+  document.getElementById('log-km').value='';
+  document.getElementById('log-notes').value='';
+  rpe='';
+  document.querySelectorAll('.rpe-btn').forEach(b=>b.classList.remove('sel'));
+
+  if(hit){
+    if(hit.km_threshold>=50){
+      document.getElementById('fin-sub').textContent=participant.name+', you\'ve completed\nThe Jaipur Challenge!';
+      showScreen('finish');
+    } else {
+      document.getElementById('ms-em').textContent=hit.emoji;
+      document.getElementById('ms-lm').textContent=hit.landmark;
+      document.getElementById('ms-km').textContent=hit.km_threshold+'km complete';
+      document.getElementById('ms-title').textContent=hit.article_title;
+      document.getElementById('ms-text').textContent=hit.article_text;
+      showScreen('milestone');
+    }
+    confetti();
+  } else {
+    toast('+'+km+'km logged! Total: '+newKm.toFixed(1)+'km');
+    showScreen('dash');
+  }
+}
+
+// ── LEADERBOARD ──
+async function loadLB() {
+  const lb=document.getElementById('lb-body');
+  lb.innerHTML='<div class="loading"><div class="spinner"></div></div>';
+  const {data:ch}=await sb.from('challenges').select('id').eq('slug','jaipur-challenge').maybeSingle();
+  const {data:users}=await sb.from('participants').select('name,total_km,status').eq('challenge_id',ch.id).order('total_km',{ascending:false});
+  if(!users?.length){lb.innerHTML='<div class="empty">No participants yet.<br/>Be the first! 🏃</div>';return;}
+  const rc=i=>i===0?'g':i===1?'s':i===2?'b':'';
+  const re=i=>i===0?'🥇':i===1?'🥈':i===2?'🥉':(i+1);
+  lb.innerHTML=users.map((u,i)=>{
+    const km=parseFloat(u.total_km)||0;
+    let loc=LOCS[0]; LOCS.forEach(l=>{if(km>=l.km)loc=l;});
+    return `<div class="lb-item">
+      <div class="lb-rank ${rc(i)}">${re(i)}</div>
+      <div class="lb-info"><div class="lb-name">${u.name}</div><div class="lb-loc">${loc.emoji} ${loc.name}</div></div>
+      <div class="lb-km">${km.toFixed(1)} km</div>
+    </div>`;
+  }).join('');
+}
+
+// ── PROFILE ──
+async function loadProfile() {
+  const body=document.getElementById('prof-body');
+  body.innerHTML='<div class="loading"><div class="spinner"></div></div>';
+  const {data:acts}=await sb.from('activities').select('*').eq('participant_id',participant.id).order('date',{ascending:false});
+  if(!acts?.length){body.innerHTML='<div class="empty">No activities yet.<br/>Start moving! 🏃</div>';return;}
+  const em=t=>({'Walking':'🚶','Running':'🏃','Cycling':'🚴','Swimming':'🏊'}[t]||'✨');
+  body.innerHTML=`
+    <div class="card">
+      <div style="font-size:12px;color:var(--grey);font-weight:600;letter-spacing:.5px;margin-bottom:12px">SUMMARY</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div><div style="font-size:22px;font-weight:700;color:var(--gd)">${acts.length}</div><div style="font-size:11px;color:var(--grey)">Sessions</div></div>
+        <div><div style="font-size:22px;font-weight:700;color:var(--gd)">${(parseFloat(participant.total_km)||0).toFixed(1)}</div><div style="font-size:11px;color:var(--grey)">Total km</div></div>
+      </div>
+    </div>
+    <div style="font-size:12px;color:var(--grey);font-weight:600;letter-spacing:.5px;margin-bottom:10px">ACTIVITY LOG</div>
+    ${acts.map(a=>`<div class="hist-item">
+      <div class="hist-icon">${em(a.activity_type)}</div>
+      <div class="hist-info">
+        <div class="hist-date">${a.date} · ${a.activity_type}${a.rpe?' · '+a.rpe:''}</div>
+        <div class="hist-detail">${a.notes||'No notes'}</div>
+      </div>
+      <div class="hist-km">${parseFloat(a.distance_km).toFixed(1)}km</div>
+    </div>`).join('')}`;
+}
+
+// ── ADMIN ──
+async function showAdmin() {
+  const pw=prompt('Admin password:');
+  if(pw!=='stillmoving2026'){alert('Incorrect.');return;}
+  showScreen('admin');
+}
+
+async function loadAdmin() {
+  const {data:ch}=await sb.from('challenges').select('id').eq('slug','jaipur-challenge').maybeSingle();
+  const {data:users}=await sb.from('participants').select('*').eq('challenge_id',ch.id).order('total_km',{ascending:false});
+  const total=users?.length||0;
+  const completed=users?.filter(u=>u.status==='completed').length||0;
+  document.getElementById('admin-stats').innerHTML=`
+    <div class="stat"><div class="stat-v">${total}</div><div class="stat-l">Total</div></div>
+    <div class="stat"><div class="stat-v">${total-completed}</div><div class="stat-l">Active</div></div>
+    <div class="stat"><div class="stat-v">${completed}</div><div class="stat-l">Finished</div></div>`;
+
+  // Get activity counts
+  const actCounts={};
+  if(users?.length){
+    const ids=users.map(u=>u.id);
+    for(const id of ids){
+      const {count}=await sb.from('activities').select('*',{count:'exact',head:true}).eq('participant_id',id);
+      actCounts[id]=count||0;
+    }
+  }
+
+  const tbody=document.getElementById('admin-tbody');
+  if(!users?.length){tbody.innerHTML='<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--grey)">No participants yet.</td></tr>';return;}
+  tbody.innerHTML=users.map(u=>`<tr>
+    <td><strong>${u.name}</strong></td>
+    <td>${u.email}</td>
+    <td>${u.tier}</td>
+    <td>${parseFloat(u.total_km||0).toFixed(1)}</td>
+    <td>${actCounts[u.id]||0}</td>
+    <td><span class="badge ${u.status==='completed'?'b-done':'b-active'}">${u.status==='completed'?'✅ Done':'🏃 Active'}</span></td>
+  </tr>`).join('');
+}
+
+async function exportCSV() {
+  const {data:ch}=await sb.from('challenges').select('id').eq('slug','jaipur-challenge').maybeSingle();
+  const {data:users}=await sb.from('participants').select('*').eq('challenge_id',ch.id);
+  if(!users?.length){toast('No data to export');return;}
+  const rows=[['Name','Email','Phone','Tier','Total KM','Status','Joined']];
+  users.forEach(u=>rows.push([u.name,u.email,u.phone||'',u.tier,parseFloat(u.total_km||0).toFixed(1),u.status,u.joined_date]));
+  const csv=rows.map(r=>r.join(',')).join('\n');
+  const blob=new Blob([csv],{type:'text/csv'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='stillmoving_participants.csv';
+  a.click();
+  toast('CSV exported!');
+}
+
+// ── CONFETTI ──
+function confetti() {
+  const canvas=document.createElement('canvas');
+  canvas.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:999';
+  canvas.width=window.innerWidth; canvas.height=window.innerHeight;
+  document.body.appendChild(canvas);
+  const ctx=canvas.getContext('2d');
+  const cols=['#1a4a2e','#95d5b2','#f4a621','#ffffff','#2d6a4f'];
+  const ps=Array.from({length:80},()=>({x:Math.random()*canvas.width,y:-10,r:Math.random()*6+3,d:Math.random()*3+1,c:cols[Math.floor(Math.random()*cols.length)],t:Math.random()*10-5}));
+  let f=0;
+  const draw=()=>{
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    ps.forEach(p=>{ctx.beginPath();ctx.fillStyle=p.c;ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fill();p.y+=p.d;p.x+=Math.sin(f*.05)*p.t;});
+    f++;
+    if(f<150) requestAnimationFrame(draw);
+    else canvas.remove();
+  };
+  draw();
+}
+
+// ── TOAST ──
+function toast(msg) {
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2500);
+}
+
+// ── INIT ──
+window.addEventListener('load',async()=>{
+  const {data:{session}}=await sb.auth.getSession();
+  if(session?.user?.email) await loadParticipant(session.user.email);
+});
+</script>
+</body>
+</html>
