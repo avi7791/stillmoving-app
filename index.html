@@ -537,15 +537,15 @@ async function sendMagicLink(email){
 }
 
 async function signInWithEmail(){
-  // From PIN screen — send magic link directly to stored email
-  if(!loginEmail){showScreen('s-login');return;}
+  if(!loginEmail){showScreen("s-login");return;}
   const {error}=await sb.auth.signInWithOtp({email:loginEmail,options:{shouldCreateUser:false}});
-  if(error){toast('Could not send link. Try again.');return;}
-  // Show confirmation on PIN screen
-  document.getElementById('pin-err').textContent='';
-  document.getElementById('pin-sub').textContent='Check your email for a sign-in link!';
-  document.getElementById('pin-title').textContent='Link sent to '+loginEmail;
-  toast('Sign-in link sent to '+loginEmail);
+  if(error){toast("Could not send link. Try again.");return;}
+  document.getElementById("link-email-shown").textContent=loginEmail;
+  document.getElementById("email-step").style.display="none";
+  document.getElementById("link-step").style.display="block";
+  document.querySelectorAll(".tab")[0].click();
+  showScreen("s-login");
+  toast("Sign-in link sent!");
 }
 
 function resetLogin(){
