@@ -536,10 +536,16 @@ async function sendMagicLink(email){
   toast('Sign-in link sent to '+email);
 }
 
-function signInWithEmail(){
-  // From PIN screen — go back to email
-  pinBuffer='';
-  showScreen('s-login');
+async function signInWithEmail(){
+  // From PIN screen — send magic link directly to stored email
+  if(!loginEmail){showScreen('s-login');return;}
+  const {error}=await sb.auth.signInWithOtp({email:loginEmail,options:{shouldCreateUser:false}});
+  if(error){toast('Could not send link. Try again.');return;}
+  // Show confirmation on PIN screen
+  document.getElementById('pin-err').textContent='';
+  document.getElementById('pin-sub').textContent='Check your email for a sign-in link!';
+  document.getElementById('pin-title').textContent='Link sent to '+loginEmail;
+  toast('Sign-in link sent to '+loginEmail);
 }
 
 function resetLogin(){
