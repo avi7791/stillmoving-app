@@ -11,10 +11,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-    :root{
-      --gd:#1a4a2e;--gm:#2d6a4f;--gl:#95d5b2;--gp:#d8f3dc;--gx:#f0faf4;
-      --grey:#6c757d;--white:#fff;--text:#1a1a2e;
-    }
+    :root{--gd:#1a4a2e;--gm:#2d6a4f;--gl:#95d5b2;--gp:#d8f3dc;--gx:#f0faf4;--grey:#6c757d;--white:#fff;--text:#1a1a2e;}
     body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--gx);color:var(--text);min-height:100vh;max-width:430px;margin:0 auto}
     .screen{display:none;min-height:100vh;flex-direction:column}
     .screen.active{display:flex}
@@ -46,7 +43,24 @@
     .otp-em{font-size:48px;margin-bottom:12px}
     .otp-sent h3{color:var(--gd);margin-bottom:6px}
     .otp-sent p{color:var(--grey);font-size:13px;margin-bottom:20px}
-    .otp-input{text-align:center;font-size:24px;font-weight:700;letter-spacing:8px}
+
+    /* PIN PAD */
+    #s-pin{background:var(--gd);justify-content:center;align-items:center;padding:40px 24px;text-align:center}
+    .pin-logo{width:120px;margin-bottom:20px}
+    .pin-title{color:var(--white);font-size:22px;font-weight:700;margin-bottom:6px}
+    .pin-sub{color:var(--gl);font-size:13px;margin-bottom:30px}
+    .pin-dots{display:flex;justify-content:center;gap:16px;margin-bottom:30px}
+    .pin-dot{width:16px;height:16px;border-radius:50%;background:rgba(255,255,255,.3);transition:background .2s}
+    .pin-dot.filled{background:var(--white)}
+    .pin-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;width:100%;max-width:280px}
+    .pin-btn{background:rgba(255,255,255,.15);border:none;border-radius:16px;padding:18px;font-size:22px;font-weight:600;color:var(--white);cursor:pointer;transition:background .2s}
+    .pin-btn:active{background:rgba(255,255,255,.3)}
+    .pin-btn.del{font-size:18px}
+    .pin-err{color:#ff6b6b;font-size:13px;margin-top:16px;min-height:20px}
+    .pin-link{color:var(--gl);font-size:13px;margin-top:20px;cursor:pointer;text-decoration:underline}
+
+    /* SET PIN */
+    #s-setpin{background:var(--gd);justify-content:center;align-items:center;padding:40px 24px;text-align:center}
 
     /* DASHBOARD */
     #s-dash{background:var(--gx)}
@@ -163,7 +177,7 @@
 </head>
 <body>
 
-<!-- LOGIN -->
+<!-- ══ LOGIN ══ -->
 <div id="s-login" class="screen active">
   <img src="logo.png" class="login-logo" alt="Still Moving"/>
   <p class="login-tag">Because life doesn't stop, and neither do you...</p>
@@ -176,27 +190,29 @@
     </div>
 
     <div id="tab-login">
-      <div id="otp-step-1">
+      <div id="email-step">
         <div class="fg">
           <label>Email Address</label>
           <input type="email" id="login-email" placeholder="your@email.com"/>
         </div>
         <div id="login-err" class="err"></div>
-        <button class="btn" onclick="sendOTP()">Send OTP →</button>
+        <button class="btn" onclick="handleSignIn()">Continue →</button>
       </div>
-      <div id="otp-step-2" style="display:none">
+      <div id="link-step" style="display:none">
         <div class="otp-sent">
           <div class="otp-em">📧</div>
-          <h3>Check your email</h3>
-          <p>We sent a code to<br/><strong id="otp-email-shown"></strong></p>
+          <h3>Check your email!</h3>
+          <p>We sent a sign-in link to<br/><strong id="link-email-shown"></strong></p>
         </div>
-        <div class="fg">
-          <label>Enter OTP</label>
-          <input type="number" id="otp-code" class="otp-input" placeholder="000000"/>
+        <div style="background:var(--gp);border-radius:14px;padding:16px;margin-bottom:16px;text-align:center">
+          <div style="font-size:13px;color:var(--gd);line-height:1.7">
+            📬 Click the <strong>"Sign in"</strong> link in your email.<br/>
+            It opens the app automatically.<br/><br/>
+            <span style="font-size:11px;color:var(--grey)">Link expires in 1 hour · Check spam if not found</span>
+          </div>
         </div>
-        <div id="otp-err" class="err"></div>
-        <button class="btn" onclick="verifyOTP()">Verify →</button>
-        <button class="btn btn-out" onclick="resetOTP()">← Back</button>
+        <div id="link-err" class="err"></div>
+        <button class="btn btn-out" onclick="resetLogin()">← Use different email</button>
       </div>
     </div>
 
@@ -220,7 +236,65 @@
   </div>
 </div>
 
-<!-- DASHBOARD -->
+<!-- ══ PIN ENTRY ══ -->
+<div id="s-pin" class="screen">
+  <img src="logo.png" class="pin-logo" alt="Still Moving"/>
+  <div class="pin-title" id="pin-title">Enter Your PIN</div>
+  <div class="pin-sub" id="pin-sub">Use your 4-digit PIN to sign in quickly</div>
+  <div class="pin-dots">
+    <div class="pin-dot" id="pd1"></div>
+    <div class="pin-dot" id="pd2"></div>
+    <div class="pin-dot" id="pd3"></div>
+    <div class="pin-dot" id="pd4"></div>
+  </div>
+  <div class="pin-pad">
+    <button class="pin-btn" onclick="pinPress('1')">1</button>
+    <button class="pin-btn" onclick="pinPress('2')">2</button>
+    <button class="pin-btn" onclick="pinPress('3')">3</button>
+    <button class="pin-btn" onclick="pinPress('4')">4</button>
+    <button class="pin-btn" onclick="pinPress('5')">5</button>
+    <button class="pin-btn" onclick="pinPress('6')">6</button>
+    <button class="pin-btn" onclick="pinPress('7')">7</button>
+    <button class="pin-btn" onclick="pinPress('8')">8</button>
+    <button class="pin-btn" onclick="pinPress('9')">9</button>
+    <button class="pin-btn" onclick="pinPress('clear')" style="font-size:13px">CLR</button>
+    <button class="pin-btn" onclick="pinPress('0')">0</button>
+    <button class="pin-btn del" onclick="pinPress('del')">⌫</button>
+  </div>
+  <div class="pin-err" id="pin-err"></div>
+  <div class="pin-link" onclick="signInWithEmail()">Sign in with email instead</div>
+</div>
+
+<!-- ══ SET PIN ══ -->
+<div id="s-setpin" class="screen">
+  <img src="logo.png" class="pin-logo" alt="Still Moving"/>
+  <div class="pin-title">Set Your PIN</div>
+  <div class="pin-sub" style="color:var(--gl);font-size:13px;margin-bottom:30px">Create a 4-digit PIN for quick login next time</div>
+  <div class="pin-dots">
+    <div class="pin-dot" id="spd1"></div>
+    <div class="pin-dot" id="spd2"></div>
+    <div class="pin-dot" id="spd3"></div>
+    <div class="pin-dot" id="spd4"></div>
+  </div>
+  <div class="pin-pad">
+    <button class="pin-btn" onclick="setPinPress('1')">1</button>
+    <button class="pin-btn" onclick="setPinPress('2')">2</button>
+    <button class="pin-btn" onclick="setPinPress('3')">3</button>
+    <button class="pin-btn" onclick="setPinPress('4')">4</button>
+    <button class="pin-btn" onclick="setPinPress('5')">5</button>
+    <button class="pin-btn" onclick="setPinPress('6')">6</button>
+    <button class="pin-btn" onclick="setPinPress('7')">7</button>
+    <button class="pin-btn" onclick="setPinPress('8')">8</button>
+    <button class="pin-btn" onclick="setPinPress('9')">9</button>
+    <button class="pin-btn" onclick="setPinPress('clear')" style="font-size:13px">CLR</button>
+    <button class="pin-btn" onclick="setPinPress('0')">0</button>
+    <button class="pin-btn del" onclick="setPinPress('del')">⌫</button>
+  </div>
+  <div class="pin-err" id="setpin-err"></div>
+  <div class="pin-link" onclick="skipPin()">Skip for now</div>
+</div>
+
+<!-- ══ DASHBOARD ══ -->
 <div id="s-dash" class="screen">
   <div class="dash-hero">
     <div class="dash-top">
@@ -282,7 +356,7 @@
   </nav>
 </div>
 
-<!-- LOG -->
+<!-- ══ LOG ══ -->
 <div id="s-log" class="screen">
   <div class="hdr">
     <button class="back" onclick="showScreen('dash')">←</button>
@@ -316,7 +390,7 @@
   </div>
 </div>
 
-<!-- MILESTONE -->
+<!-- ══ MILESTONE ══ -->
 <div id="s-milestone" class="screen">
   <div class="ms-emoji" id="ms-em">🏰</div>
   <div class="ms-reached">MILESTONE REACHED</div>
@@ -329,7 +403,7 @@
   <button class="btn" onclick="showScreen('dash')" style="background:rgba(255,255,255,.2);border:1.5px solid rgba(255,255,255,.4)">Continue Journey →</button>
 </div>
 
-<!-- LEADERBOARD -->
+<!-- ══ LEADERBOARD ══ -->
 <div id="s-lb" class="screen">
   <div class="hdr">
     <button class="back" onclick="showScreen('dash')">←</button>
@@ -339,7 +413,7 @@
   <div class="lb-body" id="lb-body"><div class="loading"><div class="spinner"></div></div></div>
 </div>
 
-<!-- PROFILE -->
+<!-- ══ PROFILE ══ -->
 <div id="s-profile" class="screen">
   <div class="hdr">
     <button class="back" onclick="showScreen('dash')">←</button>
@@ -349,7 +423,7 @@
   <div class="prof-body" id="prof-body"><div class="loading"><div class="spinner"></div></div></div>
 </div>
 
-<!-- FINISH -->
+<!-- ══ FINISH ══ -->
 <div id="s-finish" class="screen">
   <div class="fin-medal">🏅</div>
   <div class="fin-title">You Did It!</div>
@@ -360,7 +434,7 @@
   <button class="btn" onclick="showScreen('dash')" style="background:rgba(255,255,255,.2);border:1.5px solid rgba(255,255,255,.4)">Back to Dashboard</button>
 </div>
 
-<!-- ADMIN -->
+<!-- ══ ADMIN ══ -->
 <div id="s-admin" class="screen">
   <div class="hdr">
     <button class="back" onclick="showScreen('s-login')">←</button>
@@ -385,19 +459,17 @@
 <div class="toast" id="toast"></div>
 
 <script>
-const {createClient} = supabase;
-const sb = createClient(
+const {createClient}=supabase;
+const sb=createClient(
   'https://vtxqfawfdewzfuwihave.supabase.co',
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ0eHFmYXdmZGV3emZ1d2loYXZlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgyMjAwODAsImV4cCI6MjEwMzc5NjA4MH0.1B8p0hI8UBMsWlAkhQg8gPep27rPeR3Sl40kwwDvPcE'
 );
 
-let participant = null;
-let challenge = null;
-let milestones = [];
-let rpe = '';
-let loginEmail = '';
+let participant=null,challenge=null,milestones=[],rpe='',loginEmail='';
+let pinBuffer='',setPinBuffer='',setPinStage=1,confirmPin='';
+let isSettingPin=false;
 
-const LOCS = [
+const LOCS=[
   {km:0,name:'Amer Fort — Start',emoji:'🏰'},
   {km:10,name:'Jal Mahal',emoji:'🌊'},
   {km:20,name:'City Palace',emoji:'🏛️'},
@@ -406,13 +478,14 @@ const LOCS = [
   {km:50,name:'Nahargarh Fort — Done!',emoji:'🏆'},
 ];
 
-function showScreen(id) {
+// ── SCREENS ──
+function showScreen(id){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
-  const el = document.getElementById(id.startsWith('s-')?id:'s-'+id) || document.getElementById(id);
+  const el=document.getElementById(id.startsWith('s-')?id:'s-'+id)||document.getElementById(id);
   if(el) el.classList.add('active');
   document.querySelectorAll('.nav-i').forEach(n=>n.classList.remove('active'));
-  const ni = {'dash':0,'log':1,'lb':2,'profile':3};
-  const key = id.replace('s-','');
+  const ni={'dash':0,'log':1,'lb':2,'profile':3};
+  const key=id.replace('s-','');
   if(ni[key]!==undefined) document.querySelectorAll('.nav-i')[ni[key]]?.classList.add('active');
   if(key==='dash') updateDash();
   if(key==='lb') loadLB();
@@ -420,56 +493,156 @@ function showScreen(id) {
   if(key==='admin') loadAdmin();
 }
 
-function switchTab(tab, btn) {
+function switchTab(tab,btn){
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   btn.classList.add('active');
-  document.getElementById('tab-login').style.display = tab==='login'?'block':'none';
-  document.getElementById('tab-register').style.display = tab==='register'?'block':'none';
+  document.getElementById('tab-login').style.display=tab==='login'?'block':'none';
+  document.getElementById('tab-register').style.display=tab==='register'?'block':'none';
 }
 
 // ── AUTH ──
-async function sendOTP() {
-  const email = document.getElementById('login-email').value.trim();
-  const err = document.getElementById('login-err');
-  if(!email||!email.includes('@')) {err.textContent='Valid email required.';return;}
+async function handleSignIn(){
+  const email=document.getElementById('login-email').value.trim();
+  const err=document.getElementById('login-err');
+  if(!email||!email.includes('@')){err.textContent='Valid email required.';return;}
   err.textContent='';
-  loginEmail = email;
-  const {data:p} = await sb.from('participants').select('id').eq('email',email).maybeSingle();
-  if(!p) {err.textContent='Email not found. Please register first.';return;}
-  const {error} = await sb.auth.signInWithOtp({email,options:{shouldCreateUser:false}});
-  if(error) {err.textContent='Could not send OTP. Try again.';return;}
-  document.getElementById('otp-email-shown').textContent = email;
-  document.getElementById('otp-step-1').style.display='none';
-  document.getElementById('otp-step-2').style.display='block';
-  toast('OTP sent to '+email);
+  loginEmail=email;
+
+  // Check if participant exists
+  const {data:p}=await sb.from('participants').select('id,pin').eq('email',email).maybeSingle();
+  if(!p){err.textContent='Email not found. Please register first.';return;}
+
+  // If they have a PIN — show PIN screen
+  if(p.pin){
+    pinBuffer='';
+    updatePinDots('pd',0);
+    document.getElementById('pin-title').textContent='Welcome back!';
+    document.getElementById('pin-sub').textContent='Enter your 4-digit PIN';
+    document.getElementById('pin-err').textContent='';
+    showScreen('s-pin');
+    return;
+  }
+
+  // No PIN — send magic link
+  await sendMagicLink(email);
 }
 
-async function verifyOTP() {
-  const token = document.getElementById('otp-code').value.trim();
-  const err = document.getElementById('otp-err');
-  if(!token||token.length<6) {err.textContent='Enter the 6-digit code.';return;}
-  const {error} = await sb.auth.verifyOtp({email:loginEmail,token,type:'email'});
-  if(error) {err.textContent='Invalid or expired code.';return;}
-  await loadParticipant(loginEmail);
+async function sendMagicLink(email){
+  const {error}=await sb.auth.signInWithOtp({email,options:{shouldCreateUser:false}});
+  if(error){document.getElementById('login-err').textContent='Could not send link. Try again.';return;}
+  document.getElementById('link-email-shown').textContent=email;
+  document.getElementById('email-step').style.display='none';
+  document.getElementById('link-step').style.display='block';
+  toast('Sign-in link sent to '+email);
 }
 
-function resetOTP() {
-  document.getElementById('otp-step-1').style.display='block';
-  document.getElementById('otp-step-2').style.display='none';
-  document.getElementById('otp-code').value='';
-  document.getElementById('otp-err').textContent='';
+function signInWithEmail(){
+  // From PIN screen — go back to email
+  pinBuffer='';
+  showScreen('s-login');
 }
 
-async function logout() {
+function resetLogin(){
+  document.getElementById('email-step').style.display='block';
+  document.getElementById('link-step').style.display='none';
+  document.getElementById('login-email').value='';
+  document.getElementById('login-err').textContent='';
+}
+
+async function logout(){
   await sb.auth.signOut();
   participant=null;
+  localStorage.removeItem('sm_email');
+  resetLogin();
   showScreen('s-login');
-  resetOTP();
-  document.getElementById('login-email').value='';
+}
+
+// ── PIN ──
+function updatePinDots(prefix,count){
+  for(let i=1;i<=4;i++){
+    const d=document.getElementById(prefix+i);
+    if(d) count>=i?d.classList.add('filled'):d.classList.remove('filled');
+  }
+}
+
+async function pinPress(val){
+  const err=document.getElementById('pin-err');
+  if(val==='del'){pinBuffer=pinBuffer.slice(0,-1);}
+  else if(val==='clear'){pinBuffer='';}
+  else if(pinBuffer.length<4){pinBuffer+=val;}
+  updatePinDots('pd',pinBuffer.length);
+  if(pinBuffer.length===4){
+    // Verify PIN
+    const {data:p}=await sb.from('participants').select('*').eq('email',loginEmail).maybeSingle();
+    if(p&&p.pin===pinBuffer){
+      participant=p;
+      localStorage.setItem('sm_email',loginEmail);
+      await loadChallengeData();
+      showScreen('dash');
+      toast('Welcome back, '+p.name+'! 👋');
+    } else {
+      err.textContent='Incorrect PIN. Try again.';
+      pinBuffer='';
+      updatePinDots('pd',0);
+    }
+  }
+}
+
+async function setPinPress(val){
+  const err=document.getElementById('setpin-err');
+  if(val==='del'){setPinBuffer=setPinBuffer.slice(0,-1);}
+  else if(val==='clear'){setPinBuffer='';}
+  else if(setPinBuffer.length<4){setPinBuffer+=val;}
+  updatePinDots('spd',setPinBuffer.length);
+
+  if(setPinBuffer.length===4){
+    if(setPinStage===1){
+      // First entry — ask to confirm
+      confirmPin=setPinBuffer;
+      setPinBuffer='';
+      setPinStage=2;
+      updatePinDots('spd',0);
+      document.querySelector('#s-setpin .pin-title').textContent='Confirm Your PIN';
+      document.querySelector('#s-setpin .pin-sub').textContent='Enter the same PIN again';
+      err.textContent='';
+    } else {
+      // Confirm entry
+      if(setPinBuffer===confirmPin){
+        // Save PIN to Supabase
+        await sb.from('participants').update({pin:setPinBuffer}).eq('id',participant.id);
+        participant.pin=setPinBuffer;
+        toast('PIN set! You can use it next time to sign in quickly 🔐');
+        showScreen('dash');
+      } else {
+        err.textContent='PINs don\'t match. Try again.';
+        setPinBuffer='';
+        setPinStage=1;
+        confirmPin='';
+        updatePinDots('spd',0);
+        document.querySelector('#s-setpin .pin-title').textContent='Set Your PIN';
+        document.querySelector('#s-setpin .pin-sub').textContent='Create a 4-digit PIN for quick login';
+      }
+    }
+  }
+}
+
+function skipPin(){
+  showScreen('dash');
+}
+
+function showSetPin(){
+  setPinBuffer='';
+  setPinStage=1;
+  confirmPin='';
+  updatePinDots('spd',0);
+  document.querySelector('#s-setpin .pin-title').textContent='Set Your PIN';
+  document.querySelector('#s-setpin .pin-sub').textContent='Create a 4-digit PIN for quick login next time';
+  document.getElementById('setpin-err').textContent='';
+  showScreen('s-setpin');
 }
 
 // ── REGISTER ──
-async function registerUser() {
+async function registerUser(){
   const name=document.getElementById('reg-name').value.trim();
   const email=document.getElementById('reg-email').value.trim();
   const phone=document.getElementById('reg-phone').value.trim();
@@ -483,30 +656,46 @@ async function registerUser() {
   const {data:ex}=await sb.from('participants').select('id').eq('email',email).maybeSingle();
   if(ex){err.textContent='Already registered. Please sign in.';switchTab('login',document.querySelectorAll('.tab')[0]);return;}
   const {error}=await sb.from('participants').insert({name,email,phone,tier,challenge_id:ch.id});
-  if(error){err.textContent='Registration failed. Try again.';return;}
-  await sb.auth.signInWithOtp({email,options:{shouldCreateUser:true}});
+  if(error){err.textContent='Registration failed. Try again.';console.error(error);return;}
   loginEmail=email;
-  toast('Registered! Check email for OTP.');
+  // Send magic link for first login
+  await sb.auth.signInWithOtp({email,options:{shouldCreateUser:true}});
+  toast('Registered! Check your email for a sign-in link.');
   switchTab('login',document.querySelectorAll('.tab')[0]);
   document.getElementById('login-email').value=email;
-  document.getElementById('otp-email-shown').textContent=email;
-  document.getElementById('otp-step-1').style.display='none';
-  document.getElementById('otp-step-2').style.display='block';
+  document.getElementById('link-email-shown').textContent=email;
+  document.getElementById('email-step').style.display='none';
+  document.getElementById('link-step').style.display='block';
 }
 
-async function loadParticipant(email) {
+async function loadParticipant(email){
   const {data:p}=await sb.from('participants').select('*').eq('email',email).maybeSingle();
-  if(!p){toast('Participant not found.');return;}
+  if(!p){toast('Participant not found. Please register.');return;}
   participant=p;
+  localStorage.setItem('sm_email',email);
+  await loadChallengeData();
+  // First time login — offer to set PIN
+  if(!p.pin){
+    showScreen('dash');
+    setTimeout(()=>{
+      if(confirm('Set a 4-digit PIN for quick login next time?')){
+        showSetPin();
+      }
+    },1000);
+  } else {
+    showScreen('dash');
+  }
+}
+
+async function loadChallengeData(){
   const {data:ch}=await sb.from('challenges').select('*').eq('slug','jaipur-challenge').maybeSingle();
   challenge=ch;
   const {data:ms}=await sb.from('milestones').select('*').eq('challenge_id',ch.id).order('km_threshold');
   milestones=ms||[];
-  showScreen('dash');
 }
 
 // ── DASHBOARD ──
-async function updateDash() {
+async function updateDash(){
   if(!participant) return;
   const {data:p}=await sb.from('participants').select('*').eq('id',participant.id).maybeSingle();
   if(p) participant=p;
@@ -516,8 +705,7 @@ async function updateDash() {
   document.getElementById('d-km').textContent=km.toFixed(1);
   document.getElementById('d-bar').style.width=pct+'%';
   document.getElementById('d-kmleft').textContent=Math.max(0,50-km).toFixed(1);
-  let loc=LOCS[0];
-  LOCS.forEach(l=>{if(km>=l.km)loc=l;});
+  let loc=LOCS[0]; LOCS.forEach(l=>{if(km>=l.km)loc=l;});
   document.getElementById('d-loc-icon').textContent=loc.emoji;
   document.getElementById('d-loc-name').textContent=loc.name;
   [0,10,20,30,40,50].forEach(t=>{
@@ -533,13 +721,12 @@ async function updateDash() {
 }
 
 // ── LOG ──
-function selRPE(btn,val) {
+function selRPE(btn,val){
   document.querySelectorAll('.rpe-btn').forEach(b=>b.classList.remove('sel'));
-  btn.classList.add('sel');
-  rpe=val;
+  btn.classList.add('sel'); rpe=val;
 }
 
-async function submitActivity() {
+async function submitActivity(){
   if(!participant) return;
   const km=parseFloat(document.getElementById('log-km').value);
   const err=document.getElementById('log-err');
@@ -550,14 +737,11 @@ async function submitActivity() {
   const today=new Date().toISOString().split('T')[0];
   const prevKm=parseFloat(participant.total_km)||0;
   const newKm=prevKm+km;
-
   await sb.from('activities').insert({participant_id:participant.id,date:today,distance_km:km,activity_type:type,rpe,notes});
-
   const upd={total_km:newKm};
   if(newKm>=50&&participant.status!=='completed'){upd.status='completed';upd.completed_date=today;}
   await sb.from('participants').update(upd).eq('id',participant.id);
   participant.total_km=newKm;
-
   const {data:reached}=await sb.from('milestones_reached').select('milestone_id').eq('participant_id',participant.id);
   const reachedIds=(reached||[]).map(r=>r.milestone_id);
   let hit=null;
@@ -568,12 +752,10 @@ async function submitActivity() {
       break;
     }
   }
-
   document.getElementById('log-km').value='';
   document.getElementById('log-notes').value='';
   rpe='';
   document.querySelectorAll('.rpe-btn').forEach(b=>b.classList.remove('sel'));
-
   if(hit){
     if(hit.km_threshold>=50){
       document.getElementById('fin-sub').textContent=participant.name+', you\'ve completed\nThe Jaipur Challenge!';
@@ -594,7 +776,7 @@ async function submitActivity() {
 }
 
 // ── LEADERBOARD ──
-async function loadLB() {
+async function loadLB(){
   const lb=document.getElementById('lb-body');
   lb.innerHTML='<div class="loading"><div class="spinner"></div></div>';
   const {data:ch}=await sb.from('challenges').select('id').eq('slug','jaipur-challenge').maybeSingle();
@@ -614,7 +796,7 @@ async function loadLB() {
 }
 
 // ── PROFILE ──
-async function loadProfile() {
+async function loadProfile(){
   const body=document.getElementById('prof-body');
   body.innerHTML='<div class="loading"><div class="spinner"></div></div>';
   const {data:acts}=await sb.from('activities').select('*').eq('participant_id',participant.id).order('date',{ascending:false});
@@ -628,7 +810,10 @@ async function loadProfile() {
         <div><div style="font-size:22px;font-weight:700;color:var(--gd)">${(parseFloat(participant.total_km)||0).toFixed(1)}</div><div style="font-size:11px;color:var(--grey)">Total km</div></div>
       </div>
     </div>
-    <div style="font-size:12px;color:var(--grey);font-weight:600;letter-spacing:.5px;margin-bottom:10px">ACTIVITY LOG</div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <div style="font-size:12px;color:var(--grey);font-weight:600;letter-spacing:.5px">ACTIVITY LOG</div>
+      <button class="btn btn-sm btn-out" onclick="showSetPin()" style="font-size:11px;padding:6px 12px">🔐 Change PIN</button>
+    </div>
     ${acts.map(a=>`<div class="hist-item">
       <div class="hist-icon">${em(a.activity_type)}</div>
       <div class="hist-info">
@@ -640,13 +825,13 @@ async function loadProfile() {
 }
 
 // ── ADMIN ──
-async function showAdmin() {
+async function showAdmin(){
   const pw=prompt('Admin password:');
   if(pw!=='stillmoving2026'){alert('Incorrect.');return;}
   showScreen('admin');
 }
 
-async function loadAdmin() {
+async function loadAdmin(){
   const {data:ch}=await sb.from('challenges').select('id').eq('slug','jaipur-challenge').maybeSingle();
   const {data:users}=await sb.from('participants').select('*').eq('challenge_id',ch.id).order('total_km',{ascending:false});
   const total=users?.length||0;
@@ -655,17 +840,13 @@ async function loadAdmin() {
     <div class="stat"><div class="stat-v">${total}</div><div class="stat-l">Total</div></div>
     <div class="stat"><div class="stat-v">${total-completed}</div><div class="stat-l">Active</div></div>
     <div class="stat"><div class="stat-v">${completed}</div><div class="stat-l">Finished</div></div>`;
-
-  // Get activity counts
   const actCounts={};
   if(users?.length){
-    const ids=users.map(u=>u.id);
-    for(const id of ids){
-      const {count}=await sb.from('activities').select('*',{count:'exact',head:true}).eq('participant_id',id);
-      actCounts[id]=count||0;
+    for(const u of users){
+      const {count}=await sb.from('activities').select('*',{count:'exact',head:true}).eq('participant_id',u.id);
+      actCounts[u.id]=count||0;
     }
   }
-
   const tbody=document.getElementById('admin-tbody');
   if(!users?.length){tbody.innerHTML='<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--grey)">No participants yet.</td></tr>';return;}
   tbody.innerHTML=users.map(u=>`<tr>
@@ -678,7 +859,7 @@ async function loadAdmin() {
   </tr>`).join('');
 }
 
-async function exportCSV() {
+async function exportCSV(){
   const {data:ch}=await sb.from('challenges').select('id').eq('slug','jaipur-challenge').maybeSingle();
   const {data:users}=await sb.from('participants').select('*').eq('challenge_id',ch.id);
   if(!users?.length){toast('No data to export');return;}
@@ -694,10 +875,10 @@ async function exportCSV() {
 }
 
 // ── CONFETTI ──
-function confetti() {
+function confetti(){
   const canvas=document.createElement('canvas');
   canvas.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:999';
-  canvas.width=window.innerWidth; canvas.height=window.innerHeight;
+  canvas.width=window.innerWidth;canvas.height=window.innerHeight;
   document.body.appendChild(canvas);
   const ctx=canvas.getContext('2d');
   const cols=['#1a4a2e','#95d5b2','#f4a621','#ffffff','#2d6a4f'];
@@ -714,16 +895,35 @@ function confetti() {
 }
 
 // ── TOAST ──
-function toast(msg) {
+function toast(msg){
   const t=document.getElementById('toast');
-  t.textContent=msg; t.classList.add('show');
+  t.textContent=msg;t.classList.add('show');
   setTimeout(()=>t.classList.remove('show'),2500);
 }
 
-// ── INIT ──
+// ── INIT — Handle magic link redirect + auto-login ──
 window.addEventListener('load',async()=>{
+  // Handle magic link callback
   const {data:{session}}=await sb.auth.getSession();
-  if(session?.user?.email) await loadParticipant(session.user.email);
+  if(session?.user?.email){
+    await loadParticipant(session.user.email);
+    return;
+  }
+  // Try PIN login from stored email
+  const stored=localStorage.getItem('sm_email');
+  if(stored){
+    const {data:p}=await sb.from('participants').select('id,name,pin').eq('email',stored).maybeSingle();
+    if(p?.pin){
+      loginEmail=stored;
+      pinBuffer='';
+      updatePinDots('pd',0);
+      document.getElementById('pin-title').textContent='Welcome back!';
+      document.getElementById('pin-sub').textContent='Enter your PIN to continue';
+      document.getElementById('pin-err').textContent='';
+      showScreen('s-pin');
+      return;
+    }
+  }
 });
 </script>
 </body>
